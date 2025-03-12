@@ -1,19 +1,26 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { supabase, signIn, signUp, signOut } from "@/lib/supabase";
-import { useRouter } from "next/navigation";
-import { User } from "@supabase/supabase-js";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import type { User } from "@supabase/supabase-js";
 
 type AuthContextType = {
     user: User | null;
     loading: boolean;
-    login: (email: string, password: string) => Promise<{ error: any }>;
     register: (
         email: string,
         password: string,
         username: string,
-    ) => Promise<{ error: any }>;
+    ) => Promise<{
+        data: { user: User } | null;
+        error: Error | null;
+    }>;
+    login: (
+        email: string,
+        password: string,
+    ) => Promise<{
+        error: Error | null;
+    }>;
     logout: () => Promise<void>;
 };
 
@@ -22,56 +29,72 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
-    const router = useRouter();
+    const supabase = createClientComponentClient();
 
     useEffect(() => {
-        const getUser = async () => {
-            const { data } = await supabase.auth.getUser();
-            setUser(data.user);
+        // Check active sessions and sets the user
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setUser(session?.user ?? null);
             setLoading(false);
-        };
+        });
 
-        getUser();
-
-        const { data: authListener } = supabase.auth.onAuthStateChange(
-            async (event, session) => {
-                setUser(session?.user ?? null);
-                setLoading(false);
-            },
-        );
+        // Listen for changes in auth state
+        const {
+            data: { subscription },
+        } = supabase.auth.onAuthStateChange(async (event, session) => {
+            setUser(session?.user ?? null);
+            setLoading(false);
+        });
 
         return () => {
-            authListener.subscription.unsubscribe();
+            subscription.unsubscribe();
         };
     }, []);
-
-    const login = async (email: string, password: string) => {
-        const { error } = await signIn(email, password);
-        if (!error) {
-            router.push("/dashboard");
-        }
-        return { error };
-    };
 
     const register = async (
         email: string,
         password: string,
         username: string,
     ) => {
-        const { error } = await signUp(email, password, username);
+        const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+                emailRedirectTo: `${location.origin}/dashboard`,
+                data: {
+                    display_name: username,
+                },
+            },
+        });
+
+        return {
+            data: data.user ? { user: data.user } : null,
+            error: error,
+        };
+    };
+
+    const login = async (email: string, password: string) => {
+        const { error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+        });
         return { error };
     };
 
     const logout = async () => {
-        await signOut();
-        router.push("/");
+        await supabase.auth.signOut();
+    };
+
+    const value = {
+        user,
+        loading,
+        register,
+        login,
+        logout,
     };
 
     return (
-        <AuthContext.Provider
-            value={{ user, loading, login, register, logout }}>
-            {children}
-        </AuthContext.Provider>
+        <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
     );
 }
 

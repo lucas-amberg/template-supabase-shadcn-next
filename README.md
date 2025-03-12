@@ -1,33 +1,17 @@
 # template-supabase-shadcn-next
 
-A Next.js template with Supabase authentication and Shadcn UI components.
+## Instructions
 
-## Getting Started
-
-1. Clone this repository
-2. Copy `.env.example` to `.env.local` and fill in your Supabase credentials
-3. Install dependencies: `npm install`
-4. Run the development server: `npm run dev`
-
-## Environment Variables
-
-- `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase project URL
-- `NEXT_PUBLIC_SUPABASE_API_KEY`: Your Supabase anon/public key
-- `SUPABASE_SERVICE_ROLE_KEY`: Your Supabase service role key (for admin operations)
-
-## Features
-
-- Authentication with Supabase
-- User profiles with username validation
-- Modern UI with Shadcn components
-- Responsive design
+1. Create supabase db
+2. Save environment variables (NEXT_PUBLIC_SUPABASE_ANON_KEY, NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+3. Run SQL commands from below
 
 ## SQL Commands
 
 ```sql
 create table if not exists profiles (
     id uuid primary key default gen_random_uuid(),
-    display_name text,
+    display_name text not null unique,
     email varchar not null unique,
     updated_at timestamptz default now(),
     created_at timestamptz default now()

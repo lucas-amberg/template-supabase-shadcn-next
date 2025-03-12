@@ -36,36 +36,64 @@ export default function SignupPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
-
-        // Basic validation
-        if (username.length < 3) {
-            setError("Username must be at least 3 characters");
-            toast.error("Username must be at least 3 characters");
-            return;
-        }
-
-        if (!/^[a-z0-9_]+$/.test(username)) {
-            setError(
-                "Username can only contain lowercase letters, numbers, and underscores",
-            );
-            toast.error(
-                "Username can only contain lowercase letters, numbers, and underscores",
-            );
-            return;
-        }
-
         setIsLoading(true);
 
         try {
-            const { error: authError } = await register(
+            const checkResponse = await fetch("/api/profile/check-username", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ username }),
+            });
+
+            const { available, error: checkError } = await checkResponse.json();
+
+            if (checkError) {
+                setError(checkError);
+                toast.error(checkError);
+                return;
+            }
+
+            if (!available) {
+                setError("Username is already taken");
+                toast.error("Username is already taken");
+                return;
+            }
+
+            const { data: authData, error: authError } = await register(
                 email,
                 password,
                 username,
             );
 
-            if (authError) {
-                setError(authError.message);
-                toast.error(authError.message);
+            if (authError || !authData) {
+                setError(authError?.message || "An unexpected error occurred");
+                toast.error(
+                    authError?.message || "An unexpected error occurred",
+                );
+                return;
+            }
+
+            const createProfileResponse = await fetch("/api/profile/create", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    userId: authData.user.id,
+                    email: email,
+                    username: username,
+                }),
+            });
+
+            const { error: profileError } = await createProfileResponse.json();
+
+            if (profileError) {
+                console.error("Profile creation error:", profileError);
+                toast.error(
+                    "Account created but profile setup failed. Please contact support.",
+                );
             } else {
                 toast.success(
                     "Signup successful! Please check your email for verification.",
