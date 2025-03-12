@@ -1,0 +1,14 @@
+/dist
+/coverage
+/.nx/cache
+/build
+/.next
+/node_modules
+/styled-system
+/uix
+/.expo
+/.env.local
+/expo-env.d.ts
+/eas.json
+/ios
+/android
