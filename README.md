@@ -5,6 +5,7 @@
 1. Create supabase db
 2. Save environment variables (NEXT_PUBLIC_SUPABASE_ANON_KEY, NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 3. Run SQL commands from below
+4. Make sure you update auth URL config to deployment url
 
 ## SQL Commands
 
